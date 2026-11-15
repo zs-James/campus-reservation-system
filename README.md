@@ -35,31 +35,31 @@ com.campus.reservation
 
 ## 🚀 快速启动
 
-1. **环境准备**：确保本地已安装 JDK 17、Maven、MySQL 8.0 和 Redis。
-2. **初始化数据库**：在 MySQL 中创建数据库 `campus_reservation`，并执行项目根目录下的建表 SQL（如果有的话，如果没有可以写：执行你自己的建表语句）。
-3. **修改配置**：复制 `src/main/resources/application-dev-example.yml` 并重命名为 `application-dev.yml`，填入你本地的 MySQL 和 Redis 连接密码。
-4. **启动项目**：运行 `ComCampusReservationApplication.java` 主类。
-5. **访问文档**：项目启动成功后，访问 Knife4j 接口文档：[http://localhost:8080/doc.html](http://localhost:8080/doc.html)
+1. 环境准备：确保本地已安装 JDK 17、Maven、MySQL 8.0 和 Redis。
+2. 初始化数据库：在 MySQL 中创建数据库 campus_reservation，执行你自己的建表语句。
+3. 修改配置：复制 src/main/resources/application-dev-example.yml 并重命名为 application-dev.yml，填入你本地的 MySQL 和 Redis 连接密码。
+4. 启动项目：运行 ComCampusReservationApplication.java 主类。
+5. 访问文档：项目启动成功后，访问 Knife4j 接口文档：[http://localhost:8080/doc.html](http://localhost:8080/doc.html)
 
 ## 📝 接口说明
 
-本项目提供完整的 RESTful API，分为 **用户端** 和 **管理端**，核心接口包含：
+本项目提供完整的 RESTful API，分为 用户端 和 管理端，核心接口包含：
 
 ### 用户端
-- `POST /api/auth/login`：用户登录获取 JWT Token
-- `GET /api/venues`：分页查询场地列表（带缓存）
-- `GET /api/venues/{id}/slots`：查询某天场地的时间槽库存
-- `POST /api/reservations`：高并发创建预约（Redis + Lua 预扣库存，Redis Stream 异步落库）
-- `POST /api/reservations/{id}/cancel`：取消预约并回滚库存
+- POST /api/auth/login：用户登录获取 JWT Token
+- GET /api/venues：分页查询场地列表（带缓存）
+- GET /api/venues/{id}/slots：查询某天场地的时间槽库存
+- POST /api/reservations：高并发创建预约（Redis + Lua 预扣库存，Redis Stream 异步落库）
+- POST /api/reservations/{id}/cancel：取消预约并回滚库存
 
 ### 管理端
-- `POST /api/admin/venues`：新增场地
-- `POST /api/admin/stocks/init`：初始化某天场地库存
-- `GET /api/admin/reservations`：多表连查预约流水（解决 N+1 问题）
+- POST /api/admin/venues：新增场地
+- POST /api/admin/stocks/init：初始化某天场地库存
+- GET /api/admin/reservations：多表连查预约流水（解决 N+1 问题）
 
 ---
 
-*(👇 接口文档预览)*
-*(![接口文档](./images/api-preview.png))*
+(👇 接口文档预览)
+(![接口文档](./images/api-preview.png))
 
-*👉 更多接口详情请启动项目后访问 Knife4j 在线文档查阅。*
+👉 更多接口详情请启动项目后访问 Knife4j 在线文档查阅。
