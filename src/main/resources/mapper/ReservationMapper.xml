@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="campus.reservation.mapper.ReservationMapper">
+    <select id="selectAdminReservationPage" resultType="campus.reservation.vo.ReservationVO">
+        select r.id , r.order_no 'orderNo' , r.venue_id 'venueId' , v.name 'venueName' , v.location 'venueLocation'
+        , r.reserve_date 'reservationDate', case r.status when 1 then '已预约' when 2 then '已取消' when 3 then '已过期' else '未知' end 'statusDesc'
+        ,v.create_time 'createTime', t.label 'slotLabel', t.start_time 'startTime' , t.end_time 'endTime'
+        from reservation r
+        left join venue v on r.venue_id = v.id
+        left join time_slot t on r.slot_id = t.id
+        <where>
+            <if test="dto.userId != null and dto.userId != ''">
+                and r.user_id = #{dto.userId}
+            </if>
+            <if test="dto.venueId != null and dto.venueId != ''">
+                and r.venue_id = #{dto.venueId}
+            </if>
+            <if test="dto.status != null and dto.status != ''">
+                and r.status = #{dto.status}
+            </if>
+            <if test="dto.reserveDate != null and dto.reserveDate != ''">
+                and r.reserve_date = #{dto.reserveDate}
+            </if>
+        </where>
+        order by r.create_time desc
+    </select>
+
+</mapper>

@@ -1,0 +1,27 @@
+# 编译输出目录
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IntelliJ IDEA 配置
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# 日志文件
+*.log
+logs/
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 忽略本地配置（如果你分离了 application-dev.yml 的话）
+application-dev.yml
+application.yml
+
+# 忽略日志文件
+hs_err_pid*.log
+*.log

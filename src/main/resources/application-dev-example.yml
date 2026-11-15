@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/campus_reservation?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: "your_mysql_password_here"
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: "your_redis_password_here"
+
+mybatis-plus:
+  configuration:
+    # 在控制台打印 SQL 语句和结果，方便你调试（生产环境可以关掉）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
