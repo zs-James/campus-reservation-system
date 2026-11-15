@@ -60,6 +60,6 @@ com.campus.reservation
 ---
 
 (👇 接口文档预览)
-(![接口文档](./images/api-preview.png))
+(![接口文档](https://github.com/zs-James/campus-reservation-system/blob/master/api-preview.png))
 
 👉 更多接口详情请启动项目后访问 Knife4j 在线文档查阅。

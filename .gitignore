@@ -18,10 +18,9 @@ logs/
 .DS_Store
 Thumbs.db
 
-# 忽略本地配置（如果你分离了 application-dev.yml 的话）
+# 忽略本地配置
 application-dev.yml
 application.yml
 
 # 忽略日志文件
 hs_err_pid*.log
-*.log
