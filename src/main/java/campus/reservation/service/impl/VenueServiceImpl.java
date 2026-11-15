@@ -19,6 +19,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.core.util.Json;
+import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -32,17 +35,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class VenueServiceImpl implements VenueService {
-    @Autowired
-    private VenueMapper venueMapper;
-    @Autowired
-    private TimeSlotMapper timeSlotMapper;
-    @Autowired
-    private VenueSlotStockMapper venueSlotStockMapper;
-    @Autowired
-    private ReservationMapper reservationMapper;
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+    private final VenueMapper venueMapper;
+    private final TimeSlotMapper timeSlotMapper;
+    private final VenueSlotStockMapper venueSlotStockMapper;
+    private final ReservationMapper reservationMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
 
     /**
      * 分页查询场地
@@ -91,30 +91,66 @@ public class VenueServiceImpl implements VenueService {
             if ("_EMPTY_".equals(venue)){
                 throw new RuntimeException("场地不存在");
             }
+            //命中缓存，直接返回
             return JSONUtil.toBean(venue, VenueDetailVO.class);
         }
 
-        // 根据id查询场地详情（查询数据库）
-        Venue venueDB = venueMapper.selectById(id);
+        //缓存未命中，准备查库，为了防止击穿，先获取锁
+        String lockKey = "lock:" + RedisConstants.VENUE_DETAIL_PREFIX + id;
+        RLock lock = redissonClient.getLock(lockKey);
 
-        //如果数据库中也没有，在redis中存入空值
-        if (venueDB == null) {
-            // 存入一个标记，过期时间设 2 分钟，防止黑客一直用假 ID 攻击数据库
+        try {
+            //尝试加锁，最多等待3秒，锁定10（用看门狗的话可以传-1）
+            boolean isLock = lock.tryLock(3, 10, TimeUnit.SECONDS);
+
+            if (!isLock) {
+                //没抢到锁，说明别人正在重建缓存，直接抛异常
+                throw new RuntimeException("系统繁忙，请稍后再试");
+            }
+
+            // 3. 抢到锁了，先做一次【双重检查】(Double Check)
+            // 因为可能在你等锁的这 3 秒里，上一个抢到锁的人已经把缓存建好了
+            String doubleCheckJson = stringRedisTemplate.opsForValue().get(RedisConstants.VENUE_DETAIL_PREFIX + id);
+
+            if (doubleCheckJson != null){
+                if ("_EMPTY_".equals(doubleCheckJson)){
+                    //说明场地不存在
+                    throw new RuntimeException("场地不存在");
+                }
+
+                //场地存在,直接返回
+                return JSONUtil.toBean(doubleCheckJson, VenueDetailVO.class);
+            }
+
+            // 确认缓存中还是没有，根据id查询场地详情（查询数据库）
+            Venue venueDB = venueMapper.selectById(id);
+
+            //如果数据库中也没有，在redis中存入空值
+            if (venueDB == null) {
+                // 存入一个标记，过期时间设 2 分钟，防止黑客一直用假 ID 攻击数据库
+                stringRedisTemplate.opsForValue().set(RedisConstants.VENUE_DETAIL_PREFIX + id,
+                        "_EMPTY_", RedisConstants.EMPTY_TTL, TimeUnit.MINUTES);
+                throw new RuntimeException("场地不存在");
+            }
+
+            // 组装场地详情VO
+            VenueDetailVO venueDetailVO = new VenueDetailVO();
+            BeanUtils.copyProperties(venueDB, venueDetailVO);
+
+
+            //如果数据库中有，存入redis，设置过期时间(随机过期时间，用来防止雪崩)
             stringRedisTemplate.opsForValue().set(RedisConstants.VENUE_DETAIL_PREFIX + id,
-                    "_EMPTY_", RedisConstants.EMPTY_TTL, TimeUnit.MINUTES);
-            throw new RuntimeException("场地不存在");
+                    JSONUtil.toJsonStr(venueDetailVO), RedisConstants.CACHE_NULL_TTL, TimeUnit.MINUTES);
+
+            return venueDetailVO;
+        } catch (InterruptedException e) {
+            throw new RuntimeException("系统异常");
+        } finally {
+            //释放锁(必须判断锁是不是当前线程持有的)
+            if (lock.isLocked() && lock.isHeldByCurrentThread()){
+                lock.unlock();
+            }
         }
-
-        // 组装场地详情VO
-        VenueDetailVO venueDetailVO = new VenueDetailVO();
-        BeanUtils.copyProperties(venueDB, venueDetailVO);
-
-
-        //如果数据库中有，存入redis，设置过期时间(随机过期时间，用来防止雪崩)
-        stringRedisTemplate.opsForValue().set(RedisConstants.VENUE_DETAIL_PREFIX + id,
-                JSONUtil.toJsonStr(venueDetailVO), RedisConstants.CACHE_NULL_TTL, TimeUnit.MINUTES);
-
-        return venueDetailVO;
     }
 
 
